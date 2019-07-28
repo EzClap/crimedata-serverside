@@ -23,6 +23,26 @@ const User = db.Model.extend({
 //option to set AuthHeaderAsBearerToken as the strategy 
 const opts = {
     jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: process.env.SECRET
+}
+
+//create a new strategy to retrieve the user id for checking 
+const strategy = new jwtStrategy(opts, (payload, next) => {
+
+    User.forge({ id: payload.id }).fetch().then((res) => {
+        next(null, res);
+    });
+});
+
+//use the new strategy 
+passport.use(strategy);
+
+    //restructure returns
+    //authenticate user on login with different result
+    router.post('/', (req, res) => {
+        if (!req.body.email || !req.body.password) {
+            return res.status(401).send({ "message": "invalid login - you need to supply both an email and password" });
+        }
         //query database with input email
         User.forge({ email: req.body.email }).fetch().then((result) => {
             if (!result) {
@@ -34,13 +54,6 @@ const opts = {
                 if (err) {
                     return res.status(400).send({ "error": "error trying to log in" });
                 }
-                secretOrKey: process.env.SECRET
-                //restructure returns
-                //authenticate user on login with different result
-                router.post('/', (req, res) => {
-                    if (!req.body.email || !req.body.password) {
-                        return res.status(401).send({ "message": "invalid login - you need to supply both an email and password" });
-                    }
                 //payload is id in the db
                 if (user) {
                     const expiresIn = 24 * 60 * 60;
